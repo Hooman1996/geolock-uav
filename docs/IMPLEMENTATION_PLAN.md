@@ -1,10 +1,10 @@
-# GeoLock Implementation Plan (v2)
+# GeoLock Implementation Plan (v3)
 
 This is the build plan for GeoLock. It turns the research spec (`GeoLock_Research_Spec.md`, v2, 17 Oct 2026) into ordered, small coding steps. The spec says *what* and *why*. This file says *in which order, in which file, and how we know a step is done*.
 
 | | |
 |---|---|
-| Version | v2, 24 Oct 2026. Changes from v1: work on `main` until the first working version; datasets are downloaded by hand (list in Step 00); Python 3.12; every matcher and dataset uses its official code (checked in §4). |
+| Version | v3, 24 Oct 2026. v2 changes: work on `main` until the first working version; datasets are downloaded by hand (list in Step 00); every matcher and dataset uses its official code (checked in §4). v3 changes: one shared environment on **Python 3.11**, chosen as the version every official repo supports (§4.3); MatchAnything is back, using the authors' Hugging Face code and weights. |
 | Start of coding | Mon 26 Oct 2026 |
 | Target | BMVC 2027 (deadline expected around late May 2027), with a decision point in mid-Feb 2027 (spec §10.1) |
 | Source of truth for maths | Research spec §5 (section numbers below, like "§5.4", point there) |
@@ -75,7 +75,7 @@ geolock-uav/
 │       ├── metrics.py    # A@T, median, RMSE, success, AUC
 │       ├── stats.py      # bootstrap CI by flight, paired tests, mixed model
 │       └── plots.py
-├── third_party/          # git submodules of official repos that are not pip packages (§4.3)
+├── third_party/          # official repos that are not pip packages, pinned (§4.3)
 ├── configs/
 │   ├── datasets/*.yaml   # paths, frame/CRS, altitude datum, camera, licence notes
 │   └── experiments/*.yaml
@@ -142,19 +142,19 @@ All repositories below were cloned and read on 24 Oct 2026. The commit is the on
 
 ### 4.1 Matchers
 
-| Matcher | Official repo (commit) | Install | Licence | Python 3.12 | Notes |
+| Matcher | Official repo (commit) | Install | Licence | Runs on Python 3.11 | Notes |
 |---|---|---|---|---|---|
 | SIFT, AKAZE | OpenCV (`opencv-python`) | pip | Apache-2.0 | ✅ | |
 | SuperPoint + LightGlue | `cvg/LightGlue` (`eb42fee2d714`) | pip from git | LightGlue Apache-2.0; **SuperPoint weights and inference file are non-commercial, academic only** (confirmed in repo) | ✅ | SuperPoint inside LightGlue is the port the LightGlue authors ship. |
 | ALIKED + LightGlue | `cvg/LightGlue` (ALIKED weights from `Shiaoming/ALIKED`) | pip from git | BSD-3 / Apache-2.0 | ✅ | The ALIKED repo itself needs compiled custom CUDA ops. LightGlue's ALIKED loads the same official weights without them, so we use that. |
-| EfficientLoFTR | `zju3dv/EfficientLoFTR` (`07e9c1401e71`) | git submodule | **Changed to "Project Registration License" (Sep 2026).** Free for academic research, publications allowed, no registration. Any company or organisation project must register first. | ⚠️ official env is Python 3.8 / torch 2.0 | Model code only needs torch, einops, kornia, loguru, yacs. It uses `kornia.utils.grid`, which kornia 0.8.3 removed, so we pin `kornia>=0.7.3,<0.8.3`. Weights are on Google Drive (manual download). |
+| EfficientLoFTR | `zju3dv/EfficientLoFTR` (`07e9c1401e71`) | git submodule | "Project Registration License" (Sep 2026). Free for academic research and papers with no registration, which is our use. | ⚠️ official env is Python 3.8 / torch 2.0 | Model code only needs torch, einops, kornia, loguru, yacs. It uses `kornia.utils.grid`, which kornia 0.8.3 removed, so we pin `kornia>=0.7.3,<0.8.3`. Weights are on Google Drive (manual download). |
 | RoMa v1 / Tiny RoMa | `Parskatt/RoMa` (`77f8d6880352`, package `romatch`) | pip from git | MIT | ✅ (needs torch ≥ 2.5.1) | Weights auto-download (RoMa + DINOv2). |
-| RoMa v2 | `Parskatt/RoMaV2` (`95c9968145c8`, package `romav2`) | pip from git | MIT code; DINOv3 under Meta's DINOv3 licence | ✅ officially tested on 3.12 | The spec called it `Parskatt/romav2`; the real name is `RoMaV2`. Weights auto-download from GitHub releases; the DINOv3 model code is fetched by `torch.hub` from GitHub on first run. |
+| RoMa v2 | `Parskatt/RoMaV2` (`95c9968145c8`, package `romav2`) | pip from git | MIT code; DINOv3 under Meta's DINOv3 licence | ✅ (needs ≥ 3.10; authors tested 3.12) | The spec called it `Parskatt/romav2`; the real name is `RoMaV2`. Weights auto-download from GitHub releases; the DINOv3 model code is fetched by `torch.hub` from GitHub on first run. |
 | XFeat | `verlab/accelerated_features` (`e92685f57f83`) | git submodule (or `torch.hub`) | Apache-2.0 | ⚠️ README env is Python 3.8 | Core model is plain torch. Requirements pin old versions for demos only. Weights are in the repo. |
 | Steerers (DeDoDe + steerer) | `georg-bn/rotation-steerers` (`b2becd5d99bc`) + `Parskatt/DeDoDe` (`6d156183f4dc`) | pip from git | MIT (DeDoDe-G uses DINOv2, Apache-2.0) | ✅ (needs ≥ 3.9) | Weights from GitHub releases. |
 | GIM (LightGlue) | `xuelunshen/gim` (`f09105a0555e`) | git submodule | MIT | ⚠️ official env is Python 3.9 / torch 1.12 | Its LightGlue code is pure torch + omegaconf, so it should load in our env. `gim_lightglue_100h.ckpt` is in the repo; GIM-RoMa weights are on Google Drive. |
-| MASt3R | `naver/mast3r` (`f5209afc300c`, plus `dust3r` submodule) | git submodule | **CC BY-NC-SA 4.0** (code and checkpoints) | ⚠️ tested on 3.11 | Optional `curope` CUDA kernel compile. Added late (Step 26) because it is the heaviest install. |
-| MatchAnything | `zju3dv/MatchAnything` (`8cd8c1129a6d`) | — | Project Registration License | ❌ | **The official GitHub repo contains no code.** Code and weights exist only inside the authors' Hugging Face Space. We drop it and use GIM as the generalist matcher. |
+| MASt3R | `naver/mast3r` (`f5209afc300c`, plus `dust3r` submodule) | git submodule | **CC BY-NC-SA 4.0** (code and checkpoints) | ✅ authors tested 3.11 | Optional `curope` CUDA kernel compile. Added late (Step 26) because it is the heaviest install. |
+| MatchAnything | Authors' Hugging Face Space `LittleFrog/MatchAnything` (code in `imcui/third_party/MatchAnything`), linked from `zju3dv/MatchAnything` (`8cd8c1129a6d`) | pinned download of the Space into `third_party/` | GitHub repo: Project Registration License (academic use free). Space metadata says Apache-2.0. We follow the stricter one. | ⚠️ its own `environment.yaml` is Python 3.8 / torch 1.12, but the Space itself runs it on Python 3.10.13 with current packages | The GitHub repo has no code, so we take code and weights from the authors' Space, pinned to a Space commit. Weights: `weights.zip` from the Google Drive link in the Space's MatchAnything README. Checked in Step 26. |
 | LiteSAM | not found | — | — | — | Could not confirm public code. |
 | DALGlue | not found | — | — | — | Could not confirm public code. |
 
@@ -162,15 +162,37 @@ All repositories below were cloned and read on 24 Oct 2026. The commit is the on
 
 | Dataset | Official repo (commit) | What we found | Effect on the plan |
 |---|---|---|---|
-| AnyVisLoc / UAV-AVL | `UAV-AVL/Benchmark` (`6c8f7980f35d`) | Full release is 24 scenes, 20,077 images. Each scene has one JSON, aerial and satellite PNG maps with `.npy` DSMs, and one `.npz` per image (image, K, 5 distortion coefficients, `pose_c2w`, `xyz`, `euler_deg`). **Coordinates are scene-local metres, not UTM.** Official code is tested on Python 3.10, PyTorch 2.5.1, numpy < 2. Licence: research only, no commercial use (including model deployment and contract research), no redistribution of derived splits, poses or metadata. | Our loader reads the `.npz` and JSON files directly. Results are scored in the scene-local frame. We run their official baseline (for E6) in its own Python 3.10 environment. |
+| AnyVisLoc / UAV-AVL | `UAV-AVL/Benchmark` (`6c8f7980f35d`) | Full release is 24 scenes, 20,077 images. Each scene has one JSON, aerial and satellite PNG maps with `.npy` DSMs, and one `.npz` per image (image, K, 5 distortion coefficients, `pose_c2w`, `xyz`, `euler_deg`). **Coordinates are scene-local metres, not UTM.** Official code is tested on Python 3.10, PyTorch 2.5.1, numpy < 2. Licence: research only, no commercial use (including model deployment and contract research), no redistribution of derived splits, poses or metadata. | Our loader reads the `.npz` and JSON files directly. Results are scored in the scene-local frame. We run their official baseline (for E6) in the shared env if possible (§4.3, point 6). |
 | GTA-UAV / Game4Loc | `Yux1angJi/GTA-UAV` (`1fbc3dbe452d`) | LR 512×384 is 12.8 GB, HR 1920×1440 is 143.3 GB, both on Hugging Face. Angle bug fixed 20 Oct 2025. Satellite references are 256-px tiles at 4 zoom levels, game-plane coordinates. `drone_loc_x_y` is the image-centre location; `height` is AGL. Apache-2.0. | The dataset is already a ×2 pyramid, so the pyramid builder just stitches tiles per level. |
 | UAV-VisLoc | `IntelliSensing/UAV-VisLoc` (`92dab485bfc7`) | 16.4 GB full set and a 2.04 GB "minimal coordinate error" sample, on Google Drive or Baidu only. The README defines the label as the ground point below the drone, i.e. the image centre. **No licence file.** | Start with the 2 GB sample. Ask the authors about licence terms before publishing any derived material. |
 
-### 4.3 How official code is installed
+### 4.3 One environment for every matcher (Python 3.11)
 
-- **Pip-installable repos** (LightGlue, RoMa, RoMa v2, DeDoDe, Steerers) go into `pyproject.toml` as optional extras pinned to a commit, for example `lightglue @ git+https://github.com/cvg/LightGlue@eb42fee2d714`.
-- **Repos that are not packages** (EfficientLoFTR, XFeat, GIM, MASt3R) are git submodules in `third_party/`, pinned to a commit. Each adapter adds its submodule to `sys.path` in one line.
-- **One environment** (Python 3.12, CUDA PyTorch ≥ 2.5.1) holds every matcher. If one official repo cannot run in it, we give that matcher its own environment rather than patching its code.
+**Which Python.** The rule is: take the highest *minimum* any repo needs, and stay at or below the versions the authors actually tested.
+
+| Repo | Needs | Authors tested |
+|---|---|---|
+| RoMa v2 | ≥ 3.10 (highest minimum) | 3.12 |
+| AnyVisLoc baseline | — | 3.10 |
+| MatchAnything (HF Space) | — | 3.10.13 |
+| MASt3R | — | 3.11 |
+| RoMa v1, LightGlue, DeDoDe, Steerers | ≥ 3.6 to 3.9 | — |
+| EfficientLoFTR, GIM, XFeat | old pinned envs (3.8 / 3.9), but the model code only uses torch, einops, kornia, loguru, yacs, omegaconf | 3.8 / 3.9 |
+
+So the window is 3.10 to 3.12, and **3.11 is the safest choice**. It is one step from every tested version, MASt3R was tested on exactly it, and it gets security fixes until Oct 2027. Python 3.10 reaches end of life this month (Oct 2026), and 3.12 is further from the 3.10 environments of AnyVisLoc and MatchAnything.
+
+**Checked:** on 24 Oct 2026, `uv pip compile` resolved all pip-installable official repos together (LightGlue, RoMa, RoMa v2 with its fused kernel, DeDoDe, Steerers) plus the dependencies of EfficientLoFTR, GIM, XFeat and MASt3R, for Linux x86_64 on Python 3.10, 3.11 and 3.12, with no conflicts. Actually importing and running each model on a GPU is still to be confirmed in Step 19 and Step 26. A scan of the non-package repos found none of the numpy aliases that numpy 2 removed (`np.float`, `np.int`, ...). MASt3R uses `torch.cuda.amp.autocast`, which only prints a deprecation warning.
+
+**How we set it up (best practice):**
+1. **One `uv`-managed virtual environment** on Python 3.11. `uv` creates the env, resolves everything at once and writes a lock file (`uv.lock`) that goes into git, so everyone gets byte-identical versions. CUDA PyTorch comes from the PyTorch index; rasterio wheels include GDAL, so conda is not needed.
+2. **Pin every official repo to a commit.** Pip-installable repos go in `pyproject.toml` as git dependencies, for example `lightglue @ git+https://github.com/cvg/LightGlue@eb42fee2d714`. Repos that are not packages (EfficientLoFTR, XFeat, GIM, MASt3R + dust3r) are git submodules in `third_party/`. MatchAnything is fetched from the authors' Hugging Face Space at a pinned Space revision by `scripts/fetch_third_party.py`. Each adapter adds its folder to `sys.path` in one line.
+3. **Put the few version constraints in one place** (`pyproject.toml`), each with a comment saying which repo needs it:
+   - `kornia>=0.7.3,<0.8.3` (EfficientLoFTR uses `kornia.utils.grid`, removed in 0.8.3);
+   - `opencv-python>=4.10,<5` (the resolver otherwise picks OpenCV 5.0; every repo was written against 4.x);
+   - `torch` is whatever the RoMa v2 fused kernel (`fused-local-corr`) has wheels for, at least 2.8.
+4. **Never edit the authors' code.** If an old repo needs a fix to run, the fix goes in our adapter. If that is impossible, a small patch file in `third_party/patches/` is applied by the fetch script, so the change is visible and reviewable.
+5. **Smoke-test after every environment change.** `scripts/check_matchers.py` runs each matcher on one synthetic pair with a known homography and fails if the homography is not recovered.
+6. **Escape hatch, only if needed.** If one repo cannot live in the shared env, it gets its own env, and its adapter calls it in a subprocess that writes matches to `.npz`. The pipeline does not change. The official AnyVisLoc baseline (Step 29) is the only planned candidate, because its code requires numpy < 2; we try the shared env first.
 
 ---
 
@@ -199,8 +221,8 @@ Other weights (LightGlue, RoMa, RoMa v2, XFeat, GIM-LightGlue, Steerers) downloa
 - **Done when:** items 1 to 4 are on disk, and `configs/datasets/*.yaml` records each local path.
 
 #### Step 01. Repository skeleton
-- `pyproject.toml`: **Python 3.12** (`requires-python = ">=3.12,<3.13"`). Core deps: numpy, opencv-python, scipy, pyproj, rasterio, geographiclib, pandas, pyarrow, pyyaml, pytest. Optional extra `[gpu]`: torch ≥ 2.5.1, kornia ≥ 0.7.3 < 0.8.3, einops, loguru, yacs, omegaconf, plus the pinned official repos from §4.3.
-- `ruff` for lint and format, `pytest` for tests, a GitHub Actions workflow that runs both on CPU with Python 3.12.
+- `pyproject.toml`: **Python 3.11** (`requires-python = ">=3.11,<3.12"`), managed with `uv` and a committed `uv.lock` (§4.3). Core deps: numpy, opencv-python (< 5), scipy, pyproj, rasterio, geographiclib, pandas, pyarrow, pyyaml, pytest. Optional extra `[gpu]`: torch, kornia ≥ 0.7.3 < 0.8.3, einops, loguru, yacs, omegaconf, plus the pinned official repos from §4.3.
+- `ruff` for lint and format, `pytest` for tests, a GitHub Actions workflow that runs both on CPU with Python 3.11.
 - `README.md` with install and "run the tests" instructions. `.gitignore` covering `data/`, `weights/`, `results/`.
 - **Done when:** `pip install -e .` and `pytest` pass in CI on an empty test.
 
@@ -306,7 +328,7 @@ All of Phase 1 is pure numpy and OpenCV, tested on synthetic inputs. This is whe
   - `matchers/roma.py`: RoMa v2 (`Parskatt/RoMaV2`), with RoMa v1 in the same file.
   - `matchers/eloftr.py`: EfficientLoFTR (`third_party/EfficientLoFTR`, sides divisible by 32).
 - Each adapter is about 30 to 60 lines: convert our image to the tensor the official code expects, call it, return `MatchResult` in our pixel coordinates. The input size is set by ScaleLock, and dense matches are capped at 5,000 (RoMa's own `sample`).
-- **Done when:** all of them run on the same 20 frames with the same pipeline call in the Python 3.12 environment, each passes a synthetic-pair test (known H recovered), and the input size passed to each model is logged and correct.
+- **Done when:** all of them run on the same 20 frames with the same pipeline call in the shared Python 3.11 environment, `scripts/check_matchers.py` passes, each passes a synthetic-pair test (known H recovered), and the input size passed to each model is logged and correct.
 
 #### Step 20. Experiment runner and results table
 - `scripts/run.py experiments/<name>.yaml`: loops dataset × matcher × condition × seed, writes one Parquet file per (matcher, condition), skips work already done (resume), and logs per-stage timings (`torch.cuda.synchronize` around GPU stages).
@@ -347,7 +369,7 @@ Each experiment is one YAML in `configs/experiments/` plus, if needed, the small
 - **Output:** calibration table, failure-detection precision and recall.
 
 #### Step 26. E3: full matcher benchmark (C2)
-- Add the remaining official matchers one at a time, one adapter file each: Tiny RoMa, XFeat, Steerers, GIM-LightGlue, MASt3R (last, heaviest install). Each also gets a config entry with its input budget and licence.
+- Add the remaining official matchers one at a time, one adapter file each: Tiny RoMa, XFeat, Steerers, GIM-LightGlue, MatchAnything (from the authors' Hugging Face Space), MASt3R (last, heaviest install). Each also gets a config entry with its input budget and licence.
 - Run under the best E1+E2 configuration and under vanilla.
 - **Output:** main results table and accuracy-vs-latency Pareto plot.
 
@@ -360,7 +382,7 @@ Each experiment is one YAML in `configs/experiments/` plus, if needed, the small
 - **Output:** MB per km² and ms per frame, with and without cache.
 
 #### Step 29. E6: UAV-specific baselines
-- Run the official AnyVisLoc baseline (`UAV-AVL/Benchmark`) in its own Python 3.10 environment, on the released 20k version.
+- Run the official AnyVisLoc baseline (`UAV-AVL/Benchmark`) on the released 20k version, in the shared env if its numpy < 2 requirement allows, otherwise in its own env.
 - LiteSAM and DALGlue only if their code and weights become public. Otherwise reproduce the LiteSAM protocol on UAV-VisLoc and compare with published numbers, clearly labelled.
 
 #### Step 30. Optional: E7 Jetson and E8 temporal gap
@@ -426,8 +448,8 @@ Each experiment is one YAML in `configs/experiments/` plus, if needed, the small
 |---|---|---|
 | `geometry/` sub-package with 10 files (§5.10) | 7 flat modules (`camera`, `rotations`, `geo`, `scalelock`, `warp`, `robust`, `observe`) | Fewer imports, each file has one clear job |
 | vismatch wraps the learned matchers (§5.11) | Official repos, one adapter file per matcher | hooman asked for official code; no wrapper resizing to override |
-| Python 3.11 (§5.11) | Python 3.12 | Requested; every core library and RoMa v2 support it (§4.1) |
-| MatchAnything as generalist (§7.1) | GIM-LightGlue only | MatchAnything's official repo has no code (§4.1) |
+| Python 3.11 (§5.11) | Python 3.11, one shared `uv` environment with a lock file | It is the version every official repo supports (§4.3) |
+| MatchAnything from its GitHub repo (§7.1) | MatchAnything from the authors' Hugging Face Space | The GitHub repo has no code (§4.1) |
 | Everything reprojected to UTM (§5.1.2) | Each map's own metric frame; UTM only for geo-referenced maps | AnyVisLoc is scene-local and GTA-UAV is a game plane (§4.2) |
 | Cloud-Optimised GeoTIFF + per-level JSON | Plain GeoTIFF per level + one `pyramid.json` | Maps are small enough to read whole |
 | HDF5/zarr feature store | `.npz` per tile, only at Step 28 | Only E5 needs it |
@@ -441,10 +463,10 @@ The maths is unchanged. Every formula still follows spec §5.
 
 ## 8. Hardware and environment
 
-- **Phases 0 to 2 and SIFT runs:** any laptop, CPU only, Python 3.12.
+- **Phases 0 to 2 and SIFT runs:** any laptop, CPU only, Python 3.11.
 - **Learned matchers (Step 19 onward):** one CUDA GPU with at least 16 GB. Dense runs are about 100+ GPU-hours in total (spec §6.5), so start E1/E2 on the 3 scoping matchers and stratified subsets.
 - **Disk:** about 200 GB for GTA-UAV HR, UAV-VisLoc and AnyVisLoc together, plus pyramids and results.
-- **Second environment:** Python 3.10 only for the official AnyVisLoc baseline (Step 29).
+- **Second environment:** only if needed, most likely for the official AnyVisLoc baseline (Step 29), which requires numpy < 2.
 - **Jetson Orin:** only for optional Step 30.
 
 ## 9. Risks to the schedule
@@ -453,6 +475,6 @@ The maths is unchanged. Every formula still follows spec §5.
 |---|---|
 | AnyVisLoc download is slow | Steps 13 and 17 use GTA-UAV, which is public, so coding is not blocked |
 | Step 17 shows no gain from ScaleLock | Stop and investigate before building more; this is the go/no-go point |
-| An official repo does not run under Python 3.12 (most likely: EfficientLoFTR, GIM, MASt3R) | Give that matcher its own environment rather than patching the authors' code |
+| An official repo does not run in the shared Python 3.11 env (most likely: EfficientLoFTR, GIM, MatchAnything) | Fix it in our adapter; if that fails, give that matcher its own env behind a subprocess (§4.3, point 6) |
 | UAV-VisLoc has no licence | Use it for results only; ask the authors before releasing anything derived from it |
 | GPU time runs short | Subsample frames by tilt and altitude bin (spec §6.5); cache every match result |
