@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GeoLock Build Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: survey-sheet look. Header, a to-scale Gantt on a map grid, then phase sheets listing each step. */
+:root {
+  --bg: #f3f5f2;
+  --paper: #ffffff;
+  --ink: #17262b;
+  --muted: #5b6b70;
+  --rule: #d5ddd9;
+  --grid: #e6ece9;
+  --accent: #c2741a;      /* contour ochre */
+  --p0: #7a8a90; --p1: #2f6f78; --p2: #4f8a5b; --p3: #3f5fa0; --p4: #a3592b; --p5: #7a4f8f;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1719; --paper: #162124; --ink: #e3ebe8; --muted: #93a4a6; --rule: #2a3a3d; --grid: #1d2a2d;
+  --accent: #e39a45;
+  --p0: #8d9ca1; --p1: #4fa3ad; --p2: #6fb67c; --p3: #7a98dc; --p4: #d7844f; --p5: #b088c4;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f1719; --paper: #162124; --ink: #e3ebe8; --muted: #93a4a6; --rule: #2a3a3d; --grid: #1d2a2d;
+  --accent: #e39a45;
+  --p0: #8d9ca1; --p1: #4fa3ad; --p2: #6fb67c; --p3: #7a98dc; --p4: #d7844f; --p5: #b088c4;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+header { display: grid; gap: 10px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-stretch: 112%; font-weight: 800; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.lede { max-width: 66ch; color: var(--muted); margin: 0; }
+h2 { font-family: var(--display); font-stretch: 105%; font-weight: 700; font-size: 20px; margin: 0; text-wrap: balance; }
+.section { display: grid; gap: 16px; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.note { font-size: 13px; color: var(--muted); }
+
+/* Gantt */
+.sheet { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; }
+.gantt-scroll { overflow-x: auto; }
+.gantt { min-width: 760px; padding: 18px 20px 14px; display: grid; gap: 6px; }
+.row { display: grid; grid-template-columns: 190px 1fr; align-items: center; gap: 12px; min-height: 26px; }
+.row .lbl { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .lbl b { font-family: var(--mono); font-weight: 600; font-size: 11px; color: var(--muted); margin-right: 6px; }
+.row.phase .lbl { font-weight: 700; }
+.row.sub .lbl { padding-left: 14px; color: var(--muted); }
+.track { position: relative; height: 22px;
+  background-image: repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px calc(100% / 8)); }
+.bar { position: absolute; top: 3px; height: 16px; border-radius: 3px; }
+.row.sub .bar { top: 6px; height: 10px; opacity: .8; }
+.bar.opt { background: repeating-linear-gradient(135deg, currentColor 0 5px, transparent 5px 9px) !important; border: 1px solid currentColor; }
+.axis .track { background: none; height: 18px; }
+.tick { position: absolute; font-family: var(--mono); font-size: 11px; color: var(--muted); transform: translateX(4px); white-space: nowrap; }
+.ms-layer { position: relative; }
+.ms { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px dashed var(--accent); pointer-events: none; }
+.today { border-left: 2px solid var(--ink); }
+.ms-row .track { height: 46px; background: none; }
+.ms-tag { position: absolute; top: 2px; font-family: var(--mono); font-size: 10.5px; line-height: 1.25; color: var(--accent); transform: translateX(-50%); text-align: center; white-space: nowrap; }
+.ms-tag.alt { top: 24px; }
+.ms-tag.today-tag { color: var(--ink); }
+.diamond { display: block; width: 8px; height: 8px; background: var(--accent); transform: rotate(45deg); margin: 0 auto 2px; }
+.today-tag .diamond { background: var(--ink); }
+
+/* Legend */
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0 20px 16px; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+
+/* Phase sheets */
+.phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.phase-card { background: var(--paper); border: 1px solid var(--rule); border-top: 4px solid var(--c); border-radius: 6px; padding: 16px 18px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.phase-card header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.phase-card h3 { margin: 0; font-family: var(--display); font-stretch: 105%; font-size: 17px; font-weight: 700; }
+.dates { font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.why { margin: 0; font-size: 13.5px; color: var(--muted); }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+ol.steps li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid var(--grid); font-size: 14px; }
+ol.steps li:first-child { border-top: 0; }
+.num { font-family: var(--mono); font-weight: 600; font-size: 12.5px; color: var(--c); padding-top: 1px; }
+.mile { font-family: var(--mono); font-size: 11px; color: var(--accent); display: block; margin-top: 2px; }
+.mile.gate { color: var(--ink); font-weight: 600; }
+.mile.gate::before { content: "◆ "; color: var(--accent); }
+.mile:not(.gate)::before { content: "◆ "; }
+.optional { color: var(--muted); font-style: italic; }
+
+/* Principles */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0; border-top: 1px solid var(--rule); }
+.rules div { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.rules strong { display: block; font-size: 14px; margin-bottom: 2px; }
+.rules p { margin: 0; font-size: 13.5px; color: var(--muted); }
+footer { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 14px; }
+footer code { font-family: var(--mono); font-size: 12px; }
+@media (max-width: 520px) { .row { grid-template-columns: 140px 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">GeoLock · ScaleLock · build plan v3 · 24 Oct 2026</div>
+    <h1>From empty repo to <span>BMVC 2027</span></h1>
+    <p class="lede">33 small steps in six phases, in one shared Python 3.11 environment, with every matcher and dataset run from its official code. Geometry is built and tested on synthetic scenes first. A first real localization on GTA-UAV decides go or no-go. The heavier extras (DEM orthorectification, PnP, caching, uncertainty) are built only right before the experiment that needs them.</p>
+  </header>
+
+  <section class="section" aria-labelledby="t-time">
+    <div class="section-head">
+      <h2 id="t-time">Timeline</h2>
+      <span class="note">To scale, 26 Oct 2026 to late May 2027. Hatched bars are optional.</span>
+    </div>
+    <div class="sheet">
+      <div class="gantt-scroll">
+        <div class="gantt" id="gantt"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="t-steps">
+    <div class="section-head">
+      <h2 id="t-steps">Steps by phase</h2>
+      <span class="note">Every step ends with a passing test. Steps 01 to 17 go straight to main; from Step 18 each step gets its own branch and PR.</span>
+    </div>
+    <div class="phases" id="phases"></div>
+  </section>
+
+  <section class="section" aria-labelledby="t-rules">
+    <h2 id="t-rules">How we keep it simple</h2>
+    <div class="rules">
+      <div><strong>Plain functions</strong><p>Geometry is small numpy functions. The only abstract class is <code>Matcher</code>.</p></div>
+      <div><strong>Official code</strong><p>Each matcher runs from its authors' repo (MatchAnything from their Hugging Face Space), pinned to a commit, behind one short adapter file.</p></div>
+      <div><strong>Main first</strong><p>Steps 01 to 17 commit to main. After the first working version, one branch and PR per step.</p></div>
+      <div><strong>One pipeline</strong><p>Conditions 1 to 8 are settings passed to the same <code>run_frame()</code>, never copies of it.</p></div>
+      <div><strong>Flat result tables</strong><p>One Parquet row per frame. O1 to O4 are all computed every run and compared offline.</p></div>
+      <div><strong>Build late</strong><p>DEM ortho, PnP, caching and uncertainty arrive just before the experiment that uses them.</p></div>
+      <div><strong>Synthetic first</strong><p>A renderer with known answers tests every formula before any real frame is used.</p></div>
+      <div><strong>No ground truth leaks</strong><p>A test sets <code>gt_EN</code> to NaN and checks the output is unchanged.</p></div>
+    </div>
+  </section>
+
+  <footer>Full plan with files, functions and "done when" checks: <code>docs/IMPLEMENTATION_PLAN.md</code> in the geolock-uav repo. Maths follows the research spec v2, §5.</footer>
+</div>
+
+<script>
+const START = new Date("2026-10-26"), END = new Date("2027-06-21");
+const span = END - START;
+const pct = d => Math.max(0, Math.min(100, (new Date(d) - START) / span * 100));
+
+const PH = {
+  p0: { name: "Setup", color: "var(--p0)" },
+  p1: { name: "Geometry core", color: "var(--p1)" },
+  p2: { name: "Maps and data", color: "var(--p2)" },
+  p3: { name: "Matching and pipeline", color: "var(--p3)" },
+  p4: { name: "Experiments", color: "var(--p4)" },
+  p5: { name: "Paper and release", color: "var(--p5)" },
+};
+
+const rows = [
+  { k: "p0", t: "phase", n: "P0", l: "Setup", a: "2026-10-26", b: "2026-11-02" },
+  { k: "p1", t: "phase", n: "P1", l: "Geometry core", a: "2026-10-26", b: "2026-11-22" },
+  { k: "p2", t: "phase", n: "P2", l: "Maps and data", a: "2026-11-16", b: "2026-12-13" },
+  { k: "p3", t: "phase", n: "P3", l: "Matching and pipeline", a: "2026-11-30", b: "2026-12-27" },
+  { k: "p4", t: "phase", n: "P4", l: "Experiments", a: "2027-01-04", b: "2027-02-28" },
+  { k: "p4", t: "sub", n: "22", l: "6b DEM ortho + O4 PnP", a: "2027-01-04", b: "2027-01-11" },
+  { k: "p4", t: "sub", n: "E1", l: "ScaleLock vs baselines", a: "2027-01-04", b: "2027-01-24" },
+  { k: "p4", t: "sub", n: "E2", l: "Attitude factorial + noise", a: "2027-01-11", b: "2027-02-07" },
+  { k: "p4", t: "sub", n: "E3", l: "Matcher benchmark", a: "2027-01-25", b: "2027-02-14" },
+  { k: "p4", t: "sub", n: "E4+", l: "E4 E5 E6 E9", a: "2027-02-01", b: "2027-02-21" },
+  { k: "p4", t: "sub", n: "E7", l: "Jetson / temporal", a: "2027-02-15", b: "2027-02-28", opt: true },
+  { k: "p5", t: "phase", n: "P5", l: "Paper and release", a: "2027-02-15", b: "2027-05-28" },
+];
+const milestones = [
+  { d: "2026-11-22", l: "M1 geometry" },
+  { d: "2026-12-13", l: "M2 data · go/no-go · v0.1", alt: true },
+  { d: "2026-12-27", l: "M3 pipeline" },
+  { d: "2027-02-15", l: "M4 venue decision", alt: true },
+  { d: "2027-05-28", l: "M5 BMVC (expected)" },
+];
+
+const g = document.getElementById("gantt");
+// axis
+const months = ["Nov","Dec","Jan","Feb","Mar","Apr","May","Jun"];
+const monthDates = ["2026-11-01","2026-12-01","2027-01-01","2027-02-01","2027-03-01","2027-04-01","2027-05-01","2027-06-01"];
+let axis = `<div class="row axis"><div class="lbl"></div><div class="track">`;
+monthDates.forEach((d, i) => axis += `<span class="tick" style="left:${pct(d)}%">${months[i]}${i===2?" '27":""}</span>`);
+axis += `</div></div>`;
+
+let body = `<div class="ms-layer">`;
+rows.forEach(r => {
+  const c = PH[r.k].color;
+  body += `<div class="row ${r.t}"><div class="lbl"><b>${r.n}</b>${r.l}</div><div class="track">
+    <span class="bar${r.opt ? " opt" : ""}" style="left:${pct(r.a)}%;width:${pct(r.b)-pct(r.a)}%;background:${c};color:${c}" title="${r.l}: ${r.a} to ${r.b}"></span></div></div>`;
+});
+let ms = `<div class="row ms-row"><div class="lbl" style="font-weight:700">Milestones</div><div class="track">`;
+milestones.forEach(m => ms += `<span class="ms-tag${m.alt?" alt":""}" style="left:${pct(m.d)}%"><i class="diamond"></i>${m.l}</span>`);
+ms += `</div></div>`;
+body += ms + `<div class="row" style="position:absolute;inset:0;pointer-events:none;min-height:0"><div></div><div style="position:relative;height:100%">`;
+milestones.forEach(m => body += `<span class="ms" style="left:${pct(m.d)}%"></span>`);
+body += `</div></div></div>`;
+g.innerHTML = axis + body;
+
+document.getElementById("legend").innerHTML = Object.values(PH)
+  .map(p => `<span><i class="sw" style="background:${p.color}"></i>${p.name}</span>`).join("") +
+  `<span><i class="sw" style="background:var(--accent);transform:rotate(45deg) scale(.75)"></i>Milestone</span>`;
+
+// phase cards
+const cards = [
+  { k: "p0", d: "26 Oct to 1 Nov", why: "Downloads are done by hand and run in parallel with coding.", s: [
+    ["00", "Download datasets by hand (GTA-UAV LR and UAV-VisLoc sample first)"],
+    ["01", "Repository skeleton (Python 3.11, uv lock file, ruff, pytest, CI)"],
+    ["02", "Core types: Frame, Condition, MatchResult, FrameResult"]]},
+  { k: "p1", d: "26 Oct to 22 Nov", why: "Pure numpy and OpenCV, tested on synthetic scenes. No real data needed.", s: [
+    ["03", "Camera model"],
+    ["04", "Rotations and attitude"],
+    ["05", "Coordinates, distances and AGL"],
+    ["06", "GSD formulas and ScaleLock"],
+    ["07", "Query warps (resize, yaw, flat rectification)"],
+    ["08", "Synthetic scene renderer"],
+    ["09", "Robust fit and sanity checks"],
+    ["10", "Observation models O1, O2, O3", "M1 Geometry core"]]},
+  { k: "p2", d: "16 Nov to 13 Dec", why: "Reference pyramids and loaders. Answers the E0 questions on FOV, datum and angles.", s: [
+    ["11", "Reference pyramid builder"],
+    ["12", "Search-window protocol"],
+    ["13", "GTA-UAV loader + FOV fit"],
+    ["14", "AnyVisLoc loader"],
+    ["15", "UAV-VisLoc loader + datum check", "M2 Data ready"]]},
+  { k: "p3", d: "30 Nov to 27 Dec", why: "One run_frame() function, one experiment runner, one report script.", s: [
+    ["16", "Matcher interface + SIFT"],
+    ["17", "First end-to-end localization", "Go/no-go: ScaleLock beats vanilla · tag v0.1, branches from here", true],
+    ["18", "All conditions + leakage tests"],
+    ["19", "Learned matchers from official repos"],
+    ["20", "Experiment runner and results table"],
+    ["21", "Metrics and report", "M3 Pipeline complete"]]},
+  { k: "p4", d: "Jan to Feb 2027", why: "Each experiment is one YAML plus the small feature it needs.", s: [
+    ["22", "6b DEM ortho + O4 PnP"],
+    ["23", "E1 ScaleLock vs. baselines"],
+    ["24", "E2 + E2b attitude factorial + noise"],
+    ["25", "Uncertainty and integrity flags"],
+    ["26", "E3 full matcher benchmark (official repos)"],
+    ["27", "E4 + E9 radius and rotation sweeps"],
+    ["28", "E5 feature caching"],
+    ["29", "E6 UAV-specific baselines"],
+    ["30", "E7 Jetson / E8 temporal (optional)", "M4 Venue decision", false, true]]},
+  { k: "p5", d: "mid-Feb to May 2027", why: "Every number in the paper is regenerated from the result tables.", s: [
+    ["31", "Figures, tables and paper draft"],
+    ["32", "Open release (code, configs, seeds)", "M5 BMVC submission"]]},
+];
+document.getElementById("phases").innerHTML = cards.map((c, i) => `
+  <article class="phase-card" style="--c:${PH[c.k].color}">
+    <header><h3>P${i} ${PH[c.k].name}</h3><span class="dates">${c.d}</span></header>
+    <p class="why">${c.why}</p>
+    <ol class="steps">${c.s.map(([n, t, m, gate, opt]) =>
+      `<li><span class="num">${n}</span><span${opt ? ' class="optional"' : ""}>${t}${m ? `<span class="mile${gate ? " gate" : ""}">${m}</span>` : ""}</span></li>`).join("")}</ol>
+  </article>`).join("");
+</script>
+</body>
+</html>
